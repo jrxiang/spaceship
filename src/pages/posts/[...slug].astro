@@ -1,0 +1,140 @@
+---
+import { render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostList from '../../components/PostList.astro';
+import TableOfContents from '../../components/TableOfContents.astro';
+import { SITE } from '../../site.config';
+import {
+  formatDate,
+  getPosts,
+  getReadingTime,
+  getRelatedPosts,
+  postUrl,
+  slugify,
+  type Post,
+} from '../../lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+interface Props {
+  post: Post;
+}
+
+const { post } = Astro.props;
+const { title, description, published, updated, category, tags } = post.data;
+const { Content, headings } = await render(post);
+const readingTime = getReadingTime(post.body);
+const posts = await getPosts();
+const related = getRelatedPosts(post, posts, 3);
+
+const index = posts.findIndex((item) => item.id === post.id);
+const newer = index > 0 ? posts[index - 1] : undefined;
+const older = index >= 0 && index < posts.length - 1 ? posts[index + 1] : undefined;
+
+const canonical = new URL(postUrl(post), Astro.site ?? Astro.url.origin);
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  headline: title,
+  description,
+  datePublished: published.toISOString(),
+  dateModified: (updated ?? published).toISOString(),
+  author: { '@type': 'Person', name: SITE.author },
+  mainEntityOfPage: canonical.href,
+};
+---
+
+<BaseLayout title={title} description={description} type="article">
+  <script
+    slot="head"
+    type="application/ld+json"
+    set:html={JSON.stringify(jsonLd)}
+  />
+
+  <article class="article container">
+    <header class="article__header">
+      <p class="eyebrow">
+        <a href={`/categories/${slugify(category)}/`}>{category}</a>
+      </p>
+      <h1 class="article__title">{title}</h1>
+      <p class="article__description">{description}</p>
+
+      <div class="article__meta">
+        <time datetime={published.toISOString()}>{formatDate(published)}</time>
+        <span class="sep" aria-hidden="true">/</span>
+        <span>{readingTime} min read</span>
+        {
+          updated && (
+            <>
+              <span class="sep" aria-hidden="true">/</span>
+              <span>Updated {formatDate(updated)}</span>
+            </>
+          )
+        }
+      </div>
+    </header>
+
+    <div class="article__layout">
+      <aside class="article__aside">
+        <TableOfContents headings={headings} />
+      </aside>
+
+      <div class="prose">
+        <Content />
+      </div>
+    </div>
+
+    <footer class="article__footer">
+      {
+        tags.length > 0 && (
+          <div class="article__tags">
+            <span class="label">Tags</span>
+            {tags.map((tag) => (
+              <a class="chip" href={`/tags/${slugify(tag)}/`}>
+                {tag}
+              </a>
+            ))}
+          </div>
+        )
+      }
+
+      <h2 class="related-title">Related posts</h2>
+      {
+        related.length > 0 ? (
+          <PostList posts={related} compact />
+        ) : (
+          <p class="empty-state">
+            Nothing related yet. Browse <a href="/posts">all posts</a> instead.
+          </p>
+        )
+      }
+
+      {
+        (newer || older) && (
+          <nav class="post-nav" aria-label="Post navigation">
+            {older ? (
+              <a class="post-nav__link" href={postUrl(older)}>
+                <span class="post-nav__label">← Older</span>
+                <span class="post-nav__title">{older.data.title}</span>
+              </a>
+            ) : (
+              <span />
+            )}
+            {newer && (
+              <a class="post-nav__link post-nav__link--next" href={postUrl(newer)}>
+                <span class="post-nav__label">Newer →</span>
+                <span class="post-nav__title">{newer.data.title}</span>
+              </a>
+            )}
+          </nav>
+        )
+      }
+    </footer>
+  </article>
+</BaseLayout>

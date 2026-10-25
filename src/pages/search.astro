@@ -1,0 +1,239 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getPosts } from '../lib/posts';
+
+const posts = await getPosts();
+---
+
+<BaseLayout
+  title="Search"
+  description="Search every post by title, description, category, tag, or full text."
+>
+  <div class="container page">
+    <div class="reading">
+      <header class="page-head">
+        <p class="eyebrow">Search</p>
+        <h1 class="page-title">Find a note</h1>
+        <p class="page-lead">
+          Search across titles, descriptions, categories, tags, and full text.
+          Results update as you type.
+        </p>
+      </header>
+
+      <div class="search-box">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m16.5 16.5 4 4"></path>
+        </svg>
+        <label class="visually-hidden" for="search-input">Search posts</label>
+        <input
+          class="search-input"
+          id="search-input"
+          type="search"
+          placeholder="Type a keyword, tag, or phrase…"
+          autocomplete="off"
+          spellcheck="false"
+          autofocus
+          data-total={posts.length}
+        />
+      </div>
+
+      <p class="search-status" id="search-status" role="status" aria-live="polite">
+        {posts.length} posts indexed.
+      </p>
+
+      <ol class="post-list" id="search-results"></ol>
+
+      <noscript>
+        <p class="empty-state">
+          Search needs JavaScript. You can browse <a href="/posts">all posts</a>
+          or the <a href="/tags">tag index</a> instead.
+        </p>
+      </noscript>
+
+      <p class="search-hint search-hint--footer">
+        Press <kbd>/</kbd> to focus the field · <a href="/tags">Browse by tag →</a>
+      </p>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  const input = document.getElementById('search-input');
+  const status = document.getElementById('search-status');
+  const results = document.getElementById('search-results');
+  const dateFormat = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  });
+
+  let records = [];
+  let timer = 0;
+
+  const escapeHtml = (value) =>
+    String(value).replace(
+      /[&<>"']/g,
+      (char) =>
+        ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[char],
+    );
+
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  function highlight(value, terms) {
+    const safe = escapeHtml(value);
+    if (terms.length === 0) return safe;
+    const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
+    return safe.replace(pattern, '<mark>$1</mark>');
+  }
+
+  function snippet(text, terms) {
+    if (!text) return '';
+    const haystack = text.toLowerCase();
+    let at = -1;
+    for (const term of terms) {
+      const index = haystack.indexOf(term);
+      if (index !== -1 && (at === -1 || index < at)) at = index;
+    }
+    if (at === -1) return text.slice(0, 170);
+
+    const start = Math.max(0, at - 50);
+    let out = text.slice(start, start + 200);
+    if (start > 0) out = `…${out}`;
+    if (start + 200 < text.length) out = `${out}…`;
+    return out;
+  }
+
+  function updateUrl(query) {
+    const url = query ? `/search?q=${encodeURIComponent(query)}` : '/search';
+    history.replaceState(null, '', url);
+  }
+
+  function renderResult(record, terms) {
+    const date = dateFormat.format(new Date(record.date));
+    const tags = record.tags
+      .slice(0, 3)
+      .map((tag) => `<span>${escapeHtml(tag)}</span>`)
+      .join('');
+
+    return `
+      <li class="post-card search-result">
+        <time class="post-card__date" datetime="${record.date}">${date}</time>
+        <div>
+          <h2 class="post-card__title">
+            <a href="${record.url}">${highlight(record.title, terms)}</a>
+          </h2>
+          <p class="post-card__description">${highlight(snippet(record.text || record.description, terms), terms)}</p>
+          <div class="post-card__meta">
+            <a class="post-card__category" href="${record.categoryUrl}">${escapeHtml(record.category)}</a>
+            <span aria-hidden="true">·</span>
+            <span class="post-card__tags">${tags}</span>
+          </div>
+        </div>
+      </li>`;
+  }
+
+  function render() {
+    const query = input.value.trim();
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+    updateUrl(query);
+
+    if (!records.length) {
+      results.innerHTML = '';
+      return;
+    }
+
+    if (terms.length === 0) {
+      status.textContent = `${records.length} posts indexed.`;
+      results.innerHTML = records
+        .slice(0, 15)
+        .map((record) => renderResult(record, []))
+        .join('');
+      return;
+    }
+
+    const matches = records
+      .map((record) => {
+        const title = record.title.toLowerCase();
+        const description = record.description.toLowerCase();
+        const category = record.category.toLowerCase();
+        const tags = record.tags.join(' ').toLowerCase();
+        const text = record.text.toLowerCase();
+        const haystack = `${title} ${description} ${category} ${tags} ${text}`;
+
+        if (!terms.every((term) => haystack.includes(term))) return null;
+
+        let score = 0;
+        for (const term of terms) {
+          if (title.includes(term)) score += 10;
+          if (tags.includes(term)) score += 4;
+          if (category.includes(term)) score += 3;
+          if (description.includes(term)) score += 2;
+          if (text.includes(term)) score += 1;
+        }
+        return { record, score };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score || b.record.date.localeCompare(a.record.date));
+
+    const shown = matches.slice(0, 20);
+
+    status.textContent =
+      matches.length === 0
+        ? `No matches for “${query}”. Try a broader keyword.`
+        : `${matches.length} ${matches.length === 1 ? 'result' : 'results'} for “${query}”${
+            matches.length > shown.length ? `, showing the first ${shown.length}` : ''
+          }.`;
+
+    results.innerHTML = shown
+      .map(({ record }) => renderResult(record, terms))
+      .join('');
+  }
+
+  fetch('/search.json')
+    .then((response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then((data) => {
+      records = data;
+      const initial = new URLSearchParams(window.location.search).get('q') ?? '';
+      if (initial) input.value = initial;
+      render();
+    })
+    .catch(() => {
+      status.textContent =
+        'Search index could not be loaded. Please reload the page or browse all posts.';
+    });
+
+  input.addEventListener('input', () => {
+    window.clearTimeout(timer);
+    timer = window.setTimeout(render, 100);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (
+      event.key === '/' &&
+      document.activeElement !== input &&
+      !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName ?? '') &&
+      !document.activeElement?.isContentEditable
+    ) {
+      event.preventDefault();
+      input.focus();
+    }
+  });
+</script>

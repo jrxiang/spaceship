@@ -1,0 +1,15 @@
+---
+import { SITE } from '../site.config';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container site-footer__inner">
+    <p class="site-footer__note">© {year} {SITE.author}</p>
+    <div class="site-footer__links">
+      {SITE.email && <a href={`mailto:${SITE.email}`}>Email</a>}
+      {SITE.social.map((link) => <a href={link.href}>{link.label}</a>)}
+    </div>
+  </div>
+</footer>

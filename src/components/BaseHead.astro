@@ -1,0 +1,56 @@
+---
+import { SITE } from '../site.config';
+
+interface Props {
+  title?: string;
+  description?: string;
+  type?: 'website' | 'article';
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description = SITE.description,
+  type = 'website',
+  noindex = false,
+} = Astro.props;
+
+const siteUrl = Astro.site ?? new URL(Astro.url.origin);
+const canonical = new URL(Astro.url.pathname, siteUrl);
+const fullTitle = title ? `${title} — ${SITE.title}` : SITE.title;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+<link rel="icon" type="image/png" href="/favicon.png" />
+<link rel="alternate" type="application/rss+xml" title={`${SITE.title} — RSS`} href={new URL('/rss.xml', siteUrl)} />
+<meta name="generator" content={Astro.generator} />
+<meta name="theme-color" content="#fcfcfa" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0f100f" media="(prefers-color-scheme: dark)" />
+{noindex && <meta name="robots" content="noindex" />}
+
+<meta property="og:type" content={type} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:site_name" content={SITE.title} />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+
+<script is:inline>
+  (function () {
+    try {
+      var stored = localStorage.getItem('theme');
+      var dark = stored
+        ? stored === 'dark'
+        : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    } catch (e) {
+      document.documentElement.dataset.theme = 'light';
+    }
+  })();
+</script>

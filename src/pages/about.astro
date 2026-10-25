@@ -1,0 +1,87 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE } from '../site.config';
+import { getPosts } from '../lib/posts';
+
+const posts = await getPosts();
+---
+
+<BaseLayout
+  title="About"
+  description={`About ${SITE.title} and how the notes are organised.`}
+  lang="en"
+>
+  <div class="container page">
+    <div class="reading">
+      <header class="page-head">
+        <p class="eyebrow">About</p>
+        <h1 class="page-title">{SITE.title}</h1>
+        <p class="page-lead">{SITE.description}</p>
+      </header>
+
+      <div class="prose">
+        <p>
+          This site is a personal knowledge base: part blog, part notebook. It
+          keeps course notes, tool setup steps, and reading summaries in one
+          place, and tries to make all of it easy to find again.
+        </p>
+
+        <h2>How it is organised</h2>
+        <p>
+          Two structures work together. A <strong>category</strong> describes the
+          broad area a note belongs to — tools, AI, and whatever comes next. A
+          <strong>tag</strong> is a narrow, reusable keyword that can cross those
+          boundaries. Categories keep the archive tidy; tags let a thread run
+          through it.
+        </p>
+        <p>
+          Every post is also indexed for full-text search. Press
+          <kbd>⌘</kbd> + <kbd>K</kbd> anywhere to jump to search, or browse the
+          <a href="/posts">archive</a> and <a href="/tags">tag index</a>.
+        </p>
+
+        <h2>What you will find</h2>
+        <ul>
+          <li>
+            <strong>Tools</strong> — environment setup, Git, Docker, CUDA, and
+            the commands worth remembering.
+          </li>
+          <li>
+            <strong>AI</strong> — Transformer architecture and deep learning
+            study notes, written to explain the ideas to myself.
+          </li>
+          <li>
+            <strong>References</strong> — links and summaries that deserve a
+            second visit.
+          </li>
+        </ul>
+
+        <h2>Colophon</h2>
+        <p>
+          Built with <a href="https://astro.build">Astro</a> and Markdown,
+          rendered as static HTML with no client-side framework. Typography uses
+          system fonts, so pages stay fast and readable. Math is typeset with
+          KaTeX at build time. Posts live in
+          <code>src/content/posts</code>; adding a file is enough to publish.
+        </p>
+
+        <blockquote>
+          <p>
+            A note is only useful if you can find it again. Everything here is
+            designed around that constraint.
+          </p>
+        </blockquote>
+
+        <p>
+          There are currently {posts.length} posts. You can subscribe via
+          <a href="/rss.xml">RSS</a>
+          {SITE.email && (
+            <>
+              {' '}or write to <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
+            </>
+          )}.
+        </p>
+      </div>
+    </div>
+  </div>
+</BaseLayout>

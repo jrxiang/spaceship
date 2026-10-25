@@ -1,0 +1,73 @@
+---
+import type { MarkdownHeading } from 'astro';
+
+interface Props {
+  headings: MarkdownHeading[];
+}
+
+const items = Astro.props.headings.filter(
+  (heading) => heading.depth === 2 || heading.depth === 3,
+);
+---
+
+{
+  items.length > 1 && (
+    <nav class="toc" aria-labelledby="toc-title" data-toc>
+      <p class="toc__title" id="toc-title">
+        On this page
+      </p>
+      <ul class="toc__list">
+        {items.map((heading) => (
+          <li class={`toc__item toc__item--depth-${heading.depth}`}>
+            <a href={`#${heading.slug}`}>{heading.text}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  )
+}
+
+<script>
+  const toc = document.querySelector<HTMLElement>('[data-toc]');
+  const links = toc ? [...toc.querySelectorAll<HTMLAnchorElement>('a')] : [];
+  const headings = links
+    .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
+    .filter((heading): heading is HTMLElement => Boolean(heading));
+
+  if (links.length > 0 && headings.length > 0) {
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      const offset = 96;
+      let active = headings[0];
+
+      for (const heading of headings) {
+        if (heading.getBoundingClientRect().top - offset <= 0) {
+          active = heading;
+        } else {
+          break;
+        }
+      }
+
+      for (const link of links) {
+        const isActive = link.hash === `#${active.id}`;
+        link.classList.toggle('is-active', isActive);
+        if (isActive) {
+          link.setAttribute('aria-current', 'location');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      }
+    };
+
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(update);
+    };
+
+    document.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
+  }
+</script>

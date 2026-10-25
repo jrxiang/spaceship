@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCategories, getPosts } from '../../lib/posts';
+
+const posts = await getPosts();
+const categories = getCategories(posts);
+---
+
+<BaseLayout
+  title="Categories"
+  description="All categories on the site, with post counts."
+>
+  <div class="container page">
+    <header class="page-head">
+      <p class="eyebrow">Index</p>
+      <h1 class="page-title">Categories</h1>
+      <p class="page-lead">
+        Every note belongs to one broad area. Start here when you know the kind
+        of thing you are looking for, then narrow down with tags.
+      </p>
+    </header>
+
+    {
+      categories.length > 0 ? (
+        <ul class="term-grid">
+          {categories.map((category) => (
+            <li>
+              <a class="term-card" href={`/categories/${category.slug}/`}>
+                <span class="term-card__name">{category.name}</span>
+                <span class="term-card__count">{category.count}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="empty-state">No categories yet.</p>
+      )
+    }
+  </div>
+</BaseLayout>

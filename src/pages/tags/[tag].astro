@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostList from '../../components/PostList.astro';
+import { getPosts, getTags, slugify, type Post, type Term } from '../../lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPosts();
+  const tags = getTags(posts);
+
+  return tags.map((term) => ({
+    params: { tag: term.slug },
+    props: {
+      term,
+      posts: posts.filter((post) =>
+        post.data.tags.some((tag) => slugify(tag) === term.slug),
+      ),
+    },
+  }));
+}
+
+interface Props {
+  term: Term;
+  posts: Post[];
+}
+
+const { term, posts } = Astro.props;
+---
+
+<BaseLayout
+  title={`${term.name} — Tag`}
+  description={`Posts tagged ${term.name}.`}
+>
+  <div class="container page">
+    <header class="page-head">
+      <p class="eyebrow">
+        <a href="/tags">Tags</a>
+      </p>
+      <h1 class="page-title">#{term.name}</h1>
+      <p class="page-lead">
+        {posts.length} {posts.length === 1 ? 'post' : 'posts'} tagged with this.
+      </p>
+    </header>
+
+    <PostList posts={posts} />
+  </div>
+</BaseLayout>

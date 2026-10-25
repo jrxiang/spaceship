@@ -1,11 +1,79 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PostList from '../components/PostList.astro';
+import { SITE } from '../site.config';
+import { formatDate, getCategories, getPosts, getTags } from '../lib/posts';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const posts = await getPosts();
+const latest = posts.slice(0, 6);
+const categories = getCategories(posts);
+const tags = getTags(posts).slice(0, 12);
+const lastUpdated = posts.reduce<Date | undefined>((latestDate, post) => {
+  const date = post.data.updated ?? post.data.published;
+  return !latestDate || date > latestDate ? date : latestDate;
+}, undefined);
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<BaseLayout>
+  <section class="hero">
+    <div class="container">
+      <p class="eyebrow">Notes, essays &amp; references</p>
+      <h1 class="display-title hero__title">{SITE.title}</h1>
+      <p class="hero__lead">{SITE.description}</p>
+      <div class="hero__meta">
+        <span>{posts.length} {posts.length === 1 ? 'post' : 'posts'}</span>
+        {lastUpdated && <span>Last updated {formatDate(lastUpdated)}</span>}
+        <a href="/rss.xml">RSS feed</a>
+        <a href="/about">About this site</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="section__title">Latest writing</h2>
+        <a class="section__more" href="/posts">View all posts →</a>
+      </div>
+      <PostList posts={latest} emptyMessage="Nothing published yet." />
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="section__title">Browse by category</h2>
+        <a class="section__more" href="/categories">All categories →</a>
+      </div>
+      <div class="chip-row chip-row--compact">
+        {
+          categories.map((category) => (
+            <a class="chip" href={`/categories/${category.slug}/`}>
+              {category.name}
+              <span class="chip__count">{category.count}</span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section__head">
+        <h2 class="section__title">Topics</h2>
+        <a class="section__more" href="/tags">All tags →</a>
+      </div>
+      <div class="chip-row chip-row--compact">
+        {
+          tags.map((tag) => (
+            <a class="chip" href={`/tags/${tag.slug}/`}>
+              {tag.name}
+              <span class="chip__count">{tag.count}</span>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>
