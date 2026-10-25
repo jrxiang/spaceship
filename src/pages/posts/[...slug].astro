@@ -1,5 +1,7 @@
 ---
 import { render } from 'astro:content';
+import '@fancyapps/ui/dist/fancybox/fancybox.css';
+import '../../styles/fancybox.css';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostList from '../../components/PostList.astro';
 import TableOfContents from '../../components/TableOfContents.astro';
@@ -138,3 +140,62 @@ const jsonLd = {
     </footer>
   </article>
 </BaseLayout>
+
+<script>
+  import { Fancybox } from '@fancyapps/ui';
+
+  const images = [
+    ...document.querySelectorAll<HTMLImageElement>('.prose img'),
+  ];
+
+  for (const image of images) {
+    if (image.parentElement?.tagName === 'A') continue;
+
+    const source = image.currentSrc || image.src;
+    const link = document.createElement('a');
+
+    link.href = source;
+    link.dataset.fancybox = 'gallery';
+    link.dataset.caption = image.title || image.alt || '';
+    link.dataset.thumb = source;
+
+    image.replaceWith(link);
+    link.appendChild(image);
+  }
+
+  if (images.length > 0) {
+    Fancybox.bind('[data-fancybox="gallery"]', {
+      Hash: false,
+      hideScrollbar: false,
+      Carousel: {
+        transition: 'slide',
+        Thumbs: {
+          showOnStart: false,
+        },
+        Toolbar: {
+          // Required for the bottom-docked toolbar customisation to apply.
+          absolute: true,
+          display: {
+            left: ['counter'],
+            middle: [
+              'zoomIn',
+              'zoomOut',
+              'toggle1to1',
+              'rotateCCW',
+              'rotateCW',
+              'flipX',
+              'flipY',
+              'reset',
+            ],
+            right: ['autoplay', 'thumbs', 'close'],
+          },
+        },
+        Zoomable: {
+          Panzoom: {
+            maxScale: 4,
+          },
+        },
+      },
+    });
+  }
+</script>

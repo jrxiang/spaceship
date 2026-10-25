@@ -406,7 +406,7 @@ tags: []
 - 一个神经网络一般可以分成两块
   - 特征抽取将原始像素变成容易线性分割的特征
   - 线性分类器来做分类
-![fine tuning](/images/deep-learning/finetuning.png)
+![fine tuning](./images/deep-learning/finetuning.png)
 - 训练
   - 是一个目标数据集上的正常训练任务，但使用更强的正则化
     - 使用更小的学习率
@@ -585,7 +585,7 @@ tags: []
   - 历史原因NLP使用困惑度$e^{\pi}$来衡量：1表示完美，无穷大是最差情况
 - 梯度裁剪：将梯度投影回$\theta$长度，防止梯度爆炸
 - 更多的应用RNNs
-  ![RNN Applications](/images/deep-learning/RNN_Applications.png)
+  ![RNN Applications](./images/deep-learning/RNN_Applications.png)
 - 循环神经网络的输出取决于当下输入和前一时间的隐变量
 - Tip: 决定训练函数的是任务需求，而非模型类别
 - 每一个时间步都可以看作是一个单隐藏层的MLP
@@ -634,15 +634,15 @@ tags: []
   - 下面层的CNN用于特征抽取，可以视作编码器；最后一层Softmax回归可以视作解码器
   - 编码器：将输入编程成中间表达形式（特征）
   - 解码器：将中间表示解码成输出
-![encoder_decoder_CNN](/images/deep-learning/encoder_decoder_CNN.png)
+![encoder_decoder_CNN](./images/deep-learning/encoder_decoder_CNN.png)
 - RNN
   - 编码器：将文本表示成向量
   - 解码器：向量表示成输出
-![encoder_decoder_RNN](/images/deep-learning/encoder_decoder_RNN.png)
+![encoder_decoder_RNN](./images/deep-learning/encoder_decoder_RNN.png)
 - 一个模型被分为两块：
   - 编码器处理输出
   - 解码器生成输出（也可以拿到输入）
-![encoder_decoder](/images/deep-learning/encoder_decoder.png)
+![encoder_decoder](./images/deep-learning/encoder_decoder.png)
 
 ### seq2seq
 

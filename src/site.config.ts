@@ -14,7 +14,7 @@ export const SITE = {
     { label: 'Tags', href: '/tags', match: '/tags' },
     { label: 'About', href: '/about', match: '/about' },
   ],
-  /** Footer links. */
+  /** Links shown as icons below the hero avatar. */
   social: [
     { label: 'GitHub', href: 'https://github.com/jrxiang' },
     { label: 'RSS', href: '/rss.xml' },

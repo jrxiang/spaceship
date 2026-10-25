@@ -15,7 +15,7 @@ tags:
 ## Bag-of-Words
 
 - A Recent History of Language AI
-    ![A Recent History of Language AI](/images/transformer/A_Recent_History_of_Language_AI.png)
+    ![A Recent History of Language AI](./images/transformer/A_Recent_History_of_Language_AI.png)
 - 词袋(Bag-of-Words)：输入中token在Vocabulary中出现的频率，同时顺序也很重要，表示出来的向量即为Vector Representation
 
 ## Word2Vec
@@ -94,9 +94,9 @@ tags:
 ## Recent Improvements
 
 - 2017 与 2024 Transformer 架构对比
-  - ![Recent Improvements](/images/transformer/recent_improvements.png)
+  - ![Recent Improvements](./images/transformer/recent_improvements.png)
 - 训练文本组织方法
-  - ![训练文本组织方法](/images/transformer/documents_organization.png)
+  - ![训练文本组织方法](./images/transformer/documents_organization.png)
 - 旋转嵌入(Rotary Embeddings, RoPE)
   - 在自注意力的这一步添加了位置信息，在其中的相关性评分之前，也就是加到query和key中
 - 专家混合模型(Mixture of Experts, MoE)

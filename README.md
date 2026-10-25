@@ -8,6 +8,7 @@ A minimal, content-first blog and knowledge base built with [Astro](https://astr
 - **Two-level taxonomy** — one category per post, any number of cross-cutting tags. Index pages, term pages, and counts are generated automatically. Unicode tags (e.g. `计网`) are supported.
 - **Reading experience** — narrow measure, serif headings, table of contents with scroll highlighting, related posts, older/newer navigation.
 - **Math** — `$inline$` and `$$display$$` LaTeX rendered at build time with KaTeX (MathJax syntax from the old blog is compatible).
+- **Images** — stored next to posts with relative paths, so they preview in the editor. Astro converts them to WebP, adds dimensions and lazy loading; click any image for a Fancybox gallery (slideshow, thumbnails, pan and zoom) using the same configuration and bottom-docked toolbar as the old Hexo site.
 - **Light and dark themes** that follow the system preference, with a remembered manual toggle.
 - **Static search** — a JSON index generated at build time, filtered in the browser with keyword highlighting and URL-synced queries.
 - **Archive, RSS, canonical URLs, Open Graph metadata**, and a custom 404 page.
@@ -26,11 +27,14 @@ A minimal, content-first blog and knowledge base built with [Astro](https://astr
 
 ```text
 public/
-└── images/              # Post images, referenced as /images/...
+└── images/
+    └── avatar.jpg       # Site-level asset (hero avatar)
 src/
 ├── components/          # Header, footer, post card, table of contents, head
 ├── content/
-│   └── posts/           # Markdown posts (add a file to publish)
+│   └── posts/
+│       ├── my-post.md
+│       └── images/      # Post images, referenced relatively from Markdown
 ├── layouts/
 │   └── BaseLayout.astro
 ├── lib/
@@ -73,6 +77,18 @@ of contents.
 
 The file name becomes the URL (`my-post` → `/posts/my-post/`). Subfolders are supported for organisation and appear in the URL.
 
+### Adding images
+
+Put images beside the posts and reference them with a path relative to the Markdown file:
+
+```md
+![Architecture diagram](./images/transformer/architecture.png)
+```
+
+The editor resolves that path immediately, so images preview while you write. At build time Astro converts them to WebP, records their dimensions, adds lazy loading, and serves a hashed asset. In the published post, images are grouped into a Fancybox gallery with the configuration and toolbar/caption overrides carried over from the Hexo site (`src/pages/posts/[...slug].astro` and `src/styles/fancybox.css`).
+
+Site-wide assets such as the avatar stay in `public/` and use root-absolute paths (`/images/avatar.jpg`).
+
 ### Category vs. tag
 
 - **Category**: the broad shelf — currently `Tools` and `AI`. Keep the list short.
@@ -89,21 +105,23 @@ The content in `src/content/posts` was migrated from the Hexo site in `backup/`.
 | `date: 2026-01-12 15:19:04` | `published: 2026-01-12` (time is not displayed) |
 | `categories: tools` | `category: Tools` |
 | `tags: CUDA` / `tags:` (empty) | `tags: [cuda]` / `tags: []` |
-| Post images in `source/images/...` | `public/images/...`, referenced as `/images/...` |
+| Post images in `source/images/...` | `src/content/posts/images/...`, referenced as `./images/...` |
 | MathJax `$...$` and `$$...$$` | KaTeX via `remark-math` + `rehype-katex` |
 | `permalink: :year/:month/:day/:title/` | `/posts/<file-name>/` |
 
 All migrated posts received a Chinese `description` for listings, search results, and meta tags. Two posts had no category and were filed under `Tools` and `AI` respectively; empty tag lists were left empty rather than invented.
 
-The old favicon (`/img/favicon.png`, the "JR" monogram) is now `public/favicon.png` and doubles as the header logo. The old Hexo theme, CSS animation, and avatar (`backup/source/uploads`) are not part of the new design. Old permalinks are not redirected — add host-level redirects if those URLs are still in circulation.
+The old favicon (`/img/favicon.png`, the "JR" monogram) is now `public/favicon.png` and doubles as the header logo. The avatar (`backup/source/uploads/AVATAR.jpg`) is now `public/images/avatar.jpg` and sits at the top-right of the home hero, beside the site title, linking to About. The old Hexo theme and CSS animation are not part of the new design. Old permalinks are not redirected — add host-level redirects if those URLs are still in circulation.
 
 ## Customisation
 
-- **Site identity**: edit `src/site.config.ts` — title, description, author, email, nav items, footer links.
+- **Site identity**: edit `src/site.config.ts` — title, description, author, email, nav items, and the social links shown at the right of the hero meta row.
 - **Domain**: set `site` in `astro.config.mjs`. It is used for canonical URLs and the RSS feed.
 - **Design tokens**: typography, colours, spacing, and layout widths live at the top of `src/styles/global.css`. Dark mode overrides are under `html[data-theme='dark']`.
 - **Markdown pipeline**: remark/rehype plugins and KaTeX macros are configured in `astro.config.mjs`. Add a macro there if the notes use a custom LaTeX command.
 - **Code highlighting**: the Shiki themes are configured in `astro.config.mjs` (`github-light` / `github-dark`).
+- **Dev toolbar**: disabled through `devToolbar` in `astro.config.mjs`.
+- **Lightbox**: Fancybox options live in `src/pages/posts/[...slug].astro`; the toolbar and caption layout overrides are in `src/styles/fancybox.css`.
 - **Search scope**: `getSearchIndex()` in `src/lib/posts.ts` controls which fields are indexed.
 
 ## Deploying

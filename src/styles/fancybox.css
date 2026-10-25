@@ -1,0 +1,60 @@
+/*
+ * Fancybox overrides carried over from the old Hexo site.
+ * Toolbar sits at the bottom right, zoom buttons are hidden, and captions
+ * share the bottom bar with the toolbar.
+ */
+
+.fancybox__container {
+  --f-carousel-slide-padding: 12px 12px 62px;
+}
+
+.f-carousel__toolbar.is-absolute {
+  top: auto;
+  bottom: 0;
+}
+
+.fancybox__container .f-carousel__toolbar {
+  grid-template-columns: 1fr auto auto;
+}
+
+.fancybox__container
+  .f-carousel__toolbar
+  [data-panzoom-action='zoomIn'],
+.fancybox__container
+  .f-carousel__toolbar
+  [data-panzoom-action='zoomOut'],
+.fancybox__container
+  .f-carousel__toolbar
+  [data-panzoom-action='toggleFull'] {
+  display: none;
+}
+
+.fancybox__slide .f-caption {
+  position: absolute;
+  left: 84px;
+  right: 390px;
+  bottom: 0;
+  transform: none;
+  max-width: none;
+  max-height: none;
+  height: 62px;
+  margin: 0;
+  padding: 0;
+  display: block;
+  line-height: 62px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 14px;
+  pointer-events: none;
+  background: none;
+}
+
+@media (max-width: 768px) {
+  .fancybox__slide .f-caption {
+    left: 64px;
+    right: 150px;
+    font-size: 12px;
+  }
+}

@@ -8,6 +8,8 @@ import remarkMath from 'remark-math';
 export default defineConfig({
   // Replace with your production domain. Used for canonical URLs and RSS.
   site: 'https://example.com',
+  // Hide the floating Astro toolbar during development.
+  devToolbar: { enabled: false },
   markdown: {
     // remark/rehype pipeline, required for KaTeX math rendering.
     processor: unified({
