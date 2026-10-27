@@ -1,4 +1,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content';
+import type { SearchRecord } from './search-client';
+
+export type { SearchRecord };
 
 export type Post = CollectionEntry<'posts'>;
 
@@ -135,17 +138,6 @@ export function toPlainText(markdown: string): string {
     .trim();
 }
 
-export type SearchRecord = {
-  title: string;
-  description: string;
-  category: string;
-  categoryUrl: string;
-  tags: string[];
-  url: string;
-  date: string;
-  text: string;
-};
-
 export async function getSearchIndex(): Promise<SearchRecord[]> {
   const posts = await getPosts();
   return posts.map((post) => ({
@@ -156,6 +148,5 @@ export async function getSearchIndex(): Promise<SearchRecord[]> {
     tags: post.data.tags,
     url: postUrl(post),
     date: post.data.published.toISOString(),
-    text: toPlainText(post.body ?? ''),
   }));
 }

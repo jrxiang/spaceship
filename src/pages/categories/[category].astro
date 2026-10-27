@@ -1,9 +1,11 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import PostList from '../../components/PostList.astro';
+import TagFilter from '../../components/TagFilter.astro';
 import {
   getCategories,
   getPosts,
+  getTags,
   slugify,
   type Post,
   type Term,
@@ -28,10 +30,11 @@ interface Props {
 }
 
 const { term, posts } = Astro.props;
+const tags = getTags(posts);
 ---
 
 <BaseLayout
-  title={`${term.name} — Category`}
+  title={term.name}
   description={`Posts filed under ${term.name}.`}
 >
   <div class="container page">
@@ -46,6 +49,22 @@ const { term, posts } = Astro.props;
       </p>
     </header>
 
-    <PostList posts={posts} />
+    {tags.length > 0 && (
+      <TagFilter
+        tags={tags}
+        listId="category-posts"
+        emptyId="category-posts-empty"
+        placeholder="Type or pick a tag…"
+      />
+    )}
+
+    <div id="category-posts">
+      <PostList posts={posts} />
+    </div>
+
+    <p class="empty-state" id="category-posts-empty" hidden>
+      No posts in this category match that tag. Try a broader keyword or clear
+      the filter.
+    </p>
   </div>
 </BaseLayout>

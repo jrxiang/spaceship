@@ -1,0 +1,361 @@
+---
+import type { Term } from '../lib/posts';
+
+interface Props {
+  /** Tags available in the current scope, usually `getTags(posts)`. */
+  tags: Term[];
+  /** Id of the element whose `[data-tags]` children get filtered. */
+  listId: string;
+  /** Id of the empty-state element revealed when nothing matches. */
+  emptyId: string;
+  label?: string;
+  placeholder?: string;
+}
+
+const {
+  tags,
+  listId,
+  emptyId,
+  label = 'Filter by tag',
+  placeholder = 'Type or pick a tag…',
+} = Astro.props;
+
+const filterId = `tag-filter-${listId}`;
+const inputId = `${filterId}-input`;
+const listboxId = `${filterId}-listbox`;
+---
+
+<div
+  class="tag-filter"
+  id={filterId}
+  data-tag-filter
+  data-list={listId}
+  data-empty={emptyId}
+  hidden
+>
+  <label class="tag-filter__label" for={inputId}>{label}</label>
+
+  <div class="tag-filter__control">
+    <input
+      class="tag-filter__input"
+      id={inputId}
+      type="text"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded="false"
+      aria-controls={listboxId}
+      autocomplete="off"
+      spellcheck="false"
+      placeholder={placeholder}
+    />
+
+    <button
+      class="tag-filter__clear"
+      type="button"
+      aria-label="Clear tag filter"
+      hidden
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="m6 6 12 12M18 6 6 18"></path>
+      </svg>
+    </button>
+
+    <button
+      class="tag-filter__toggle"
+      type="button"
+      aria-label="Show all tags"
+      aria-expanded="false"
+      aria-controls={listboxId}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="m6 9 6 6 6-6"></path>
+      </svg>
+    </button>
+
+    <ul
+      class="tag-filter__list"
+      id={listboxId}
+      role="listbox"
+      aria-label="Tags"
+      hidden
+    >
+      <li
+        class="tag-filter__option"
+        role="option"
+        id={`${filterId}-option-all`}
+        data-value=""
+        aria-selected="false"
+      >
+        <span>All tags</span>
+        <span class="tag-filter__count" data-total-count></span>
+      </li>
+      {
+        tags.map((tag, index) => (
+          <li
+            class="tag-filter__option"
+            role="option"
+            id={`${filterId}-option-${index}`}
+            data-value={tag.name}
+            aria-selected="false"
+          >
+            <span>{tag.name}</span>
+            <span class="tag-filter__count">{tag.count}</span>
+          </li>
+        ))
+      }
+      <li class="tag-filter__option tag-filter__option--empty" data-no-match hidden>
+        No tags match.
+      </li>
+    </ul>
+  </div>
+
+  <p class="tag-filter__status" data-tag-status role="status" aria-live="polite"></p>
+</div>
+
+<script>
+  /** Mirrors `slugify` in `src/lib/posts.ts` so tags compare consistently. */
+  const normalizeTag = (value) =>
+    value
+      .toLowerCase()
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^\p{Letter}\p{Number}]+/gu, '-')
+      .replace(/^-+|-+$/g, '');
+
+  const toTerms = (value) =>
+    value
+      .split(/\s+/)
+      .map((part) => normalizeTag(part))
+      .filter(Boolean);
+
+  for (const root of document.querySelectorAll('[data-tag-filter]')) {
+    const list = document.getElementById(root.getAttribute('data-list') ?? '');
+    const empty = document.getElementById(root.getAttribute('data-empty') ?? '');
+    const input = root.querySelector('.tag-filter__input');
+    const toggle = root.querySelector('.tag-filter__toggle');
+    const clear = root.querySelector('.tag-filter__clear');
+    const listbox = root.querySelector('.tag-filter__list');
+    const status = root.querySelector('[data-tag-status]');
+    const totalCount = root.querySelector('[data-total-count]');
+    const noMatch = root.querySelector('[data-no-match]');
+
+    if (!list || !input || !toggle || !listbox) continue;
+
+    const items = Array.from(list.querySelectorAll('[data-tags]'));
+    const options = Array.from(listbox.querySelectorAll('[role="option"]'));
+    const allOption = listbox.querySelector('[data-value=""]');
+    const total = items.length;
+    let activeIndex = -1;
+
+    if (totalCount) totalCount.textContent = String(total);
+
+    const visibleOptions = () => options.filter((option) => !option.hidden);
+
+    function clearActive() {
+      activeIndex = -1;
+      for (const option of options) option.classList.remove('is-active');
+      input.removeAttribute('aria-activedescendant');
+    }
+
+    function setActive(index) {
+      const visible = visibleOptions();
+      if (visible.length === 0) {
+        clearActive();
+        return;
+      }
+      activeIndex =
+        ((index % visible.length) + visible.length) % visible.length;
+      for (const option of options) option.classList.remove('is-active');
+      const active = visible[activeIndex];
+      active.classList.add('is-active');
+      input.setAttribute('aria-activedescendant', active.id);
+      active.scrollIntoView({ block: 'nearest' });
+    }
+
+    function moveActive(delta) {
+      const visible = visibleOptions();
+      if (visible.length === 0) return;
+      setActive(
+        activeIndex === -1
+          ? delta > 0
+            ? 0
+            : visible.length - 1
+          : activeIndex + delta,
+      );
+    }
+
+    function filterOptions() {
+      const terms = toTerms(input.value.trim());
+      if (allOption) allOption.hidden = terms.length > 0;
+      for (const option of options) {
+        if (option === allOption) continue;
+        const value = normalizeTag(option.getAttribute('data-value') ?? '');
+        option.hidden =
+          terms.length > 0 && !terms.every((term) => value.includes(term));
+      }
+      if (noMatch) {
+        noMatch.hidden = options.some((option) => !option.hidden);
+      }
+      clearActive();
+    }
+
+    function syncSelected() {
+      const current = normalizeTag(input.value.trim());
+      for (const option of options) {
+        const value = normalizeTag(option.getAttribute('data-value') ?? '');
+        const isSelected =
+          value === current && (current !== '' || option === allOption);
+        option.setAttribute('aria-selected', String(isSelected));
+      }
+    }
+
+    function syncUrl(query) {
+      const url = query
+        ? `${window.location.pathname}?tag=${encodeURIComponent(query)}`
+        : window.location.pathname;
+      history.replaceState(null, '', url);
+    }
+
+    function applyQuery() {
+      const query = input.value.trim();
+      const terms = toTerms(query);
+      let shown = 0;
+      let first = true;
+
+      for (const item of items) {
+        const haystack = item.getAttribute('data-tags') ?? '';
+        const matches = terms.every((term) => haystack.includes(term));
+        item.hidden = !matches;
+        item.classList.toggle('is-first-visible', matches && first);
+        if (matches) {
+          shown += 1;
+          first = false;
+        }
+      }
+
+      if (empty) empty.hidden = shown > 0 || terms.length === 0;
+
+      if (status) {
+        if (terms.length === 0) {
+          status.textContent = '';
+        } else if (shown === 0) {
+          status.textContent = `No posts tagged “${query}”.`;
+        } else {
+          status.textContent = `${shown} of ${total} ${
+            total === 1 ? 'post' : 'posts'
+          } match “${query}”.`;
+        }
+      }
+
+      if (clear) clear.hidden = query === '';
+      syncSelected();
+      syncUrl(query);
+    }
+
+    function openList() {
+      filterOptions();
+      listbox.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeList() {
+      listbox.hidden = true;
+      input.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-expanded', 'false');
+      clearActive();
+    }
+
+    function choose(option) {
+      input.value = option.getAttribute('data-value') ?? '';
+      applyQuery();
+      closeList();
+    }
+
+    input.addEventListener('input', () => {
+      applyQuery();
+      openList();
+    });
+
+    input.addEventListener('focus', openList);
+
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (listbox.hidden) openList();
+        moveActive(event.key === 'ArrowDown' ? 1 : -1);
+      } else if (event.key === 'Enter') {
+        const active = listbox.querySelector('.is-active');
+        if (!listbox.hidden && active) {
+          event.preventDefault();
+          choose(active);
+        }
+      } else if (event.key === 'Escape') {
+        closeList();
+      } else if (event.key === 'Tab') {
+        closeList();
+      }
+    });
+
+    toggle.addEventListener('mousedown', (event) => event.preventDefault());
+
+    toggle.addEventListener('click', () => {
+      if (listbox.hidden) {
+        input.focus();
+        openList();
+      } else {
+        closeList();
+      }
+    });
+
+    if (clear) {
+      clear.addEventListener('click', () => {
+        input.value = '';
+        applyQuery();
+        filterOptions();
+        openList();
+        input.focus();
+      });
+    }
+
+    listbox.addEventListener('mousedown', (event) => {
+      if (!(event.target instanceof Element)) return;
+      const option = event.target.closest('[role="option"]');
+      if (!option) return;
+      event.preventDefault();
+      choose(option);
+    });
+
+    listbox.addEventListener('mouseover', (event) => {
+      if (!(event.target instanceof Element)) return;
+      const option = event.target.closest('[role="option"]');
+      if (!option || option.hidden) return;
+      setActive(visibleOptions().indexOf(option));
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!(event.target instanceof Node) || root.contains(event.target)) return;
+      closeList();
+    });
+
+    const initial = new URLSearchParams(window.location.search).get('tag') ?? '';
+    if (initial) input.value = initial;
+    applyQuery();
+    root.hidden = false;
+  }
+</script>

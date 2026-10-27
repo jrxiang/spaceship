@@ -79,6 +79,18 @@ const jsonLd = {
             </>
           )
         }
+        {
+          tags.length > 0 && (
+            <>
+              <span class="sep" aria-hidden="true">/</span>
+              <span class="article__meta-tags">
+                {tags.map((tag) => (
+                  <a href={`/tags/${slugify(tag)}/`}>{tag}</a>
+                ))}
+              </span>
+            </>
+          )
+        }
       </div>
     </header>
 
@@ -109,7 +121,7 @@ const jsonLd = {
       <h2 class="related-title">Related posts</h2>
       {
         related.length > 0 ? (
-          <PostList posts={related} compact />
+          <PostList posts={related} />
         ) : (
           <p class="empty-state">
             Nothing related yet. Browse <a href="/posts">all posts</a> instead.
@@ -163,6 +175,55 @@ const jsonLd = {
     link.appendChild(image);
   }
 
+  /**
+   * Rotating by 90 degrees swaps the image's width and height while the zoom
+   * level stays the same, so a wide image ends up taller than the viewport.
+   * Rescale it so the rotated box fits again. Shrinking is allowed (otherwise
+   * the image would be cut off), growing past the opened size is not.
+   */
+  const fitRotatedImage = (panzoom: any, openedScale: number) => {
+    const content = panzoom.getContent();
+    const container = panzoom.getContainer();
+
+    if (!content || !container) return;
+
+    const box = container.getBoundingClientRect();
+    const rect = content.getBoundingClientRect();
+
+    if (!box.width || !box.height || !rect.width || !rect.height) return;
+
+    // The caption/toolbar bar overlays the bottom of the container and Panzoom
+    // centres the image in the space above it, so the fitted image has to stay
+    // symmetric around the current centre or the top edge gets clipped.
+    const caption = container
+      .closest('.fancybox__slide')
+      ?.querySelector('.f-caption');
+    const bottomBar = caption?.getBoundingClientRect().height ?? 0;
+    const centerX = (rect.left + rect.right) / 2 - box.left;
+    const centerY = (rect.top + rect.bottom) / 2 - box.top;
+    const availableWidth = 2 * Math.min(centerX, box.width - centerX);
+    const availableHeight =
+      2 * Math.min(centerY, box.height - bottomBar - centerY);
+
+    if (availableWidth <= 0 || availableHeight <= 0) return;
+
+    const ratio = Math.min(
+      availableWidth / rect.width,
+      availableHeight / rect.height,
+    );
+    const currentScale = panzoom.getScale();
+    // Fit the rotated image, but never blow it up past the size it was
+    // opened at.
+    const scale = Math.min(openedScale, currentScale * ratio);
+
+    if (Math.abs(scale - currentScale) < 0.001) return;
+
+    // Let the fit shrink below the opened size, while keeping the user's own
+    // zoom-out limited to the fitted size.
+    panzoom.getOptions().minScale = Math.min(1, scale);
+    panzoom.execute('zoomTo', { scale });
+  };
+
   if (images.length > 0) {
     Fancybox.bind('[data-fancybox="gallery"]', {
       Hash: false,
@@ -193,7 +254,46 @@ const jsonLd = {
         Zoomable: {
           Panzoom: {
             maxScale: 4,
+            // Never zoom out below the size the image opened at.
+            minScale: 1,
+            // The image shows a grab cursor, so clicking must not zoom.
+            clickAction: false,
+            dblClickAction: false,
           },
+        },
+      },
+      on: {
+        'Carousel.panzoom:ready': (_fancybox: any, _carousel: any, slide: any) => {
+          const panzoom = slide.panzoomRef;
+          if (!panzoom) return;
+
+          const openedScale = panzoom.getScale();
+          let rotated = false;
+
+          // The panzoom "action" event passes the action as the first
+          // argument after the API instance, with no event object.
+          panzoom.on('action', (_api: any, ...args: any[]) => {
+            const action = args.find((value) => typeof value === 'string');
+
+            if (action !== 'rotateCW' && action !== 'rotateCCW') return;
+
+            rotated = true;
+
+            // Fallback for when the rotation runs without an animation.
+            setTimeout(() => {
+              if (!rotated) return;
+              rotated = false;
+              fitRotatedImage(panzoom, openedScale);
+            }, 400);
+          });
+
+          panzoom.on('animationEnd', () => {
+            if (!rotated) return;
+            rotated = false;
+            fitRotatedImage(panzoom, openedScale);
+          });
+
+
         },
       },
     });

@@ -39,7 +39,13 @@ const isActive = (href: string) =>
       }
 
       <div class="site-header__tools">
-        <a class="icon-button" href="/search" aria-label="Search" title="Search (Ctrl or ⌘ + K)">
+        <a
+          class="icon-button"
+          href="/search"
+          data-search-open
+          aria-label="Search"
+          title="Search (Ctrl or ⌘ + K)"
+        >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true">
             <circle cx="11" cy="11" r="7"></circle>
             <path d="m16.5 16.5 4 4"></path>
@@ -82,11 +88,4 @@ const isActive = (href: string) =>
   });
 
   syncLabel();
-
-  document.addEventListener('keydown', (event) => {
-    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-      event.preventDefault();
-      window.location.href = '/search';
-    }
-  });
 </script>

@@ -29,45 +29,101 @@ const items = Astro.props.headings.filter(
 
 <script>
   const toc = document.querySelector<HTMLElement>('[data-toc]');
-  const links = toc ? [...toc.querySelectorAll<HTMLAnchorElement>('a')] : [];
-  const headings = links
-    .map((link) => document.getElementById(decodeURIComponent(link.hash.slice(1))))
-    .filter((heading): heading is HTMLElement => Boolean(heading));
 
-  if (links.length > 0 && headings.length > 0) {
-    let frame = 0;
+  if (toc) {
+    const links = [...toc.querySelectorAll<HTMLAnchorElement>('a')];
 
-    const update = () => {
-      frame = 0;
-      const offset = 96;
-      let active = headings[0];
-
-      for (const heading of headings) {
-        if (heading.getBoundingClientRect().top - offset <= 0) {
-          active = heading;
-        } else {
-          break;
-        }
-      }
-
-      for (const link of links) {
-        const isActive = link.hash === `#${active.id}`;
-        link.classList.toggle('is-active', isActive);
-        if (isActive) {
-          link.setAttribute('aria-current', 'location');
-        } else {
-          link.removeAttribute('aria-current');
-        }
+    // `link.hash` is percent-encoded for non-ASCII slugs, so decode the href
+    // before matching it against the heading ids.
+    const decodeHash = (link: HTMLAnchorElement) => {
+      const raw = (link.getAttribute('href') ?? '').replace(/^#/, '');
+      try {
+        return decodeURIComponent(raw);
+      } catch {
+        return raw;
       }
     };
 
-    const onScroll = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(update);
-    };
+    const entries = links
+      .map((link) => ({
+        link,
+        heading: document.getElementById(decodeHash(link)),
+      }))
+      .filter(
+        (entry): entry is { link: HTMLAnchorElement; heading: HTMLElement } =>
+          entry.heading !== null,
+      );
 
-    document.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
-    update();
+    if (entries.length > 0) {
+      let frame = 0;
+      let lastActiveId = '';
+
+      // Keep the tracked entry inside the scrollable TOC box.
+      const keepVisible = (link: HTMLAnchorElement) => {
+        const { overflowY } = window.getComputedStyle(toc);
+        const scrollable = overflowY === 'auto' || overflowY === 'scroll';
+        if (!scrollable || toc.scrollHeight <= toc.clientHeight + 1) return;
+
+        const padding = 8;
+        const tocRect = toc.getBoundingClientRect();
+        const linkRect = link.getBoundingClientRect();
+
+        if (linkRect.top < tocRect.top + padding) {
+          toc.scrollTop -= tocRect.top + padding - linkRect.top;
+        } else if (linkRect.bottom > tocRect.bottom - padding) {
+          toc.scrollTop += linkRect.bottom - (tocRect.bottom - padding);
+        }
+      };
+
+      const update = () => {
+        frame = 0;
+
+        const offset = 96;
+        let active = entries[0].heading;
+
+        for (const { heading } of entries) {
+          if (heading.getBoundingClientRect().top - offset <= 0) {
+            active = heading;
+          } else {
+            break;
+          }
+        }
+
+        // A short final section may never cross the offset line, so pin the
+        // last entry once the page is scrolled to the bottom.
+        if (
+          window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 2
+        ) {
+          active = entries[entries.length - 1].heading;
+        }
+
+        let activeLink: HTMLAnchorElement | null = null;
+        for (const { link, heading } of entries) {
+          const isActive = heading === active;
+          link.classList.toggle('is-active', isActive);
+          if (isActive) {
+            link.setAttribute('aria-current', 'location');
+            activeLink = link;
+          } else {
+            link.removeAttribute('aria-current');
+          }
+        }
+
+        if (activeLink && active.id !== lastActiveId) {
+          lastActiveId = active.id;
+          keepVisible(activeLink);
+        }
+      };
+
+      const onScroll = () => {
+        if (frame) return;
+        frame = requestAnimationFrame(update);
+      };
+
+      window.addEventListener('scroll', onScroll, { passive: true });
+      window.addEventListener('resize', onScroll, { passive: true });
+      update();
+    }
   }
 </script>

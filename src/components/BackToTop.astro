@@ -1,0 +1,55 @@
+---
+// Floating back-to-top button, rendered once from BaseLayout.
+---
+
+<button
+  class="back-to-top"
+  type="button"
+  aria-label="Back to top"
+  title="Back to top"
+  data-back-to-top
+>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="m6 14 6-6 6 6"></path>
+  </svg>
+</button>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>('[data-back-to-top]');
+
+  if (button) {
+    const reduceMotion =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    let frame = 0;
+
+    const update = () => {
+      frame = 0;
+      button.classList.toggle('is-visible', window.scrollY > 480);
+    };
+
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(update);
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    update();
+
+    button.addEventListener('click', () => {
+      window.scrollTo({
+        top: 0,
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
+    });
+  }
+</script>

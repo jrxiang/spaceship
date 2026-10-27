@@ -7,7 +7,7 @@ const posts = await getPosts();
 
 <BaseLayout
   title="Search"
-  description="Search every post by title, description, category, tag, or full text."
+  description="Search every post by title, description, category, or tag."
 >
   <div class="container page">
     <div class="reading">
@@ -15,8 +15,8 @@ const posts = await getPosts();
         <p class="eyebrow">Search</p>
         <h1 class="page-title">Find a note</h1>
         <p class="page-lead">
-          Search across titles, descriptions, categories, tags, and full text.
-          Results update as you type.
+          Search titles, descriptions, categories, and tags. Results update as
+          you type.
         </p>
       </header>
 
@@ -66,98 +66,34 @@ const posts = await getPosts();
 </BaseLayout>
 
 <script>
-  const input = document.getElementById('search-input');
+  import {
+    loadSearchRecords,
+    renderResult,
+    searchRecords,
+  } from '../lib/search-client';
+
+  const input = document.getElementById('search-input') as HTMLInputElement;
   const status = document.getElementById('search-status');
   const results = document.getElementById('search-results');
-  const dateFormat = new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  });
 
   let records = [];
   let timer = 0;
 
-  const escapeHtml = (value) =>
-    String(value).replace(
-      /[&<>"']/g,
-      (char) =>
-        ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          '"': '&quot;',
-          "'": '&#39;',
-        })[char],
-    );
-
-  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-  function highlight(value, terms) {
-    const safe = escapeHtml(value);
-    if (terms.length === 0) return safe;
-    const pattern = new RegExp(`(${terms.map(escapeRegExp).join('|')})`, 'gi');
-    return safe.replace(pattern, '<mark>$1</mark>');
-  }
-
-  function snippet(text, terms) {
-    if (!text) return '';
-    const haystack = text.toLowerCase();
-    let at = -1;
-    for (const term of terms) {
-      const index = haystack.indexOf(term);
-      if (index !== -1 && (at === -1 || index < at)) at = index;
-    }
-    if (at === -1) return text.slice(0, 170);
-
-    const start = Math.max(0, at - 50);
-    let out = text.slice(start, start + 200);
-    if (start > 0) out = `…${out}`;
-    if (start + 200 < text.length) out = `${out}…`;
-    return out;
-  }
-
-  function updateUrl(query) {
+  function updateUrl(query: string) {
     const url = query ? `/search?q=${encodeURIComponent(query)}` : '/search';
     history.replaceState(null, '', url);
   }
 
-  function renderResult(record, terms) {
-    const date = dateFormat.format(new Date(record.date));
-    const tags = record.tags
-      .slice(0, 3)
-      .map((tag) => `<span>${escapeHtml(tag)}</span>`)
-      .join('');
-
-    return `
-      <li class="post-card search-result">
-        <time class="post-card__date" datetime="${record.date}">${date}</time>
-        <div>
-          <h2 class="post-card__title">
-            <a href="${record.url}">${highlight(record.title, terms)}</a>
-          </h2>
-          <p class="post-card__description">${highlight(snippet(record.text || record.description, terms), terms)}</p>
-          <div class="post-card__meta">
-            <a class="post-card__category" href="${record.categoryUrl}">${escapeHtml(record.category)}</a>
-            <span aria-hidden="true">·</span>
-            <span class="post-card__tags">${tags}</span>
-          </div>
-        </div>
-      </li>`;
-  }
-
   function render() {
     const query = input.value.trim();
-    const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
     updateUrl(query);
 
-    if (!records.length) {
+    if (records.length === 0) {
       results.innerHTML = '';
       return;
     }
 
-    if (terms.length === 0) {
+    if (query === '') {
       status.textContent = `${records.length} posts indexed.`;
       results.innerHTML = records
         .slice(0, 15)
@@ -166,49 +102,21 @@ const posts = await getPosts();
       return;
     }
 
-    const matches = records
-      .map((record) => {
-        const title = record.title.toLowerCase();
-        const description = record.description.toLowerCase();
-        const category = record.category.toLowerCase();
-        const tags = record.tags.join(' ').toLowerCase();
-        const text = record.text.toLowerCase();
-        const haystack = `${title} ${description} ${category} ${tags} ${text}`;
-
-        if (!terms.every((term) => haystack.includes(term))) return null;
-
-        let score = 0;
-        for (const term of terms) {
-          if (title.includes(term)) score += 10;
-          if (tags.includes(term)) score += 4;
-          if (category.includes(term)) score += 3;
-          if (description.includes(term)) score += 2;
-          if (text.includes(term)) score += 1;
-        }
-        return { record, score };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.score - a.score || b.record.date.localeCompare(a.record.date));
-
-    const shown = matches.slice(0, 20);
+    const { terms, total, matches } = searchRecords(records, query, 20);
 
     status.textContent =
-      matches.length === 0
+      total === 0
         ? `No matches for “${query}”. Try a broader keyword.`
-        : `${matches.length} ${matches.length === 1 ? 'result' : 'results'} for “${query}”${
-            matches.length > shown.length ? `, showing the first ${shown.length}` : ''
+        : `${total} ${total === 1 ? 'result' : 'results'} for “${query}”${
+            total > matches.length ? `, showing the first ${matches.length}` : ''
           }.`;
 
-    results.innerHTML = shown
+    results.innerHTML = matches
       .map(({ record }) => renderResult(record, terms))
       .join('');
   }
 
-  fetch('/search.json')
-    .then((response) => {
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      return response.json();
-    })
+  loadSearchRecords()
     .then((data) => {
       records = data;
       const initial = new URLSearchParams(window.location.search).get('q') ?? '';

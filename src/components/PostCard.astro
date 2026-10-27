@@ -18,7 +18,7 @@ const { title, description, published, category, tags } = post.data;
 const minutes = getReadingTime(post.body);
 ---
 
-<li class="post-card">
+<li class="post-card" data-tags={tags.map(slugify).filter(Boolean).join('|')}>
   <time class="post-card__date" datetime={published.toISOString()}>
     {formatDate(published)}
   </time>

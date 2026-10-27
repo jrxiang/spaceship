@@ -58,3 +58,17 @@
     font-size: 12px;
   }
 }
+
+/*
+ * Fancybox swaps the cursor to a magnifier (zoom-in / zoom-out) over a
+ * zoomable image. Use a grab hand instead, matching the cursor on the
+ * article images themselves.
+ */
+.fancybox__container .f-panzoom__wrapper.will-zoom-in,
+.fancybox__container .f-panzoom__wrapper.will-zoom-out {
+  cursor: grab;
+}
+
+.fancybox__container .f-panzoom__wrapper.is-dragging {
+  cursor: grabbing;
+}

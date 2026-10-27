@@ -1,0 +1,93 @@
+---
+// Progressive enhancement for `.prose pre` blocks: adds a language label and
+// a copy button. Rendered once from BaseLayout so every page benefits.
+---
+
+<script>
+  const COPY_LABEL = 'Copy';
+  const COPIED_LABEL = 'Copied';
+
+  function fallbackCopy(text: string) {
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.position = 'fixed';
+    area.style.top = '-9999px';
+    area.style.opacity = '0';
+    document.body.appendChild(area);
+    area.select();
+    let copied = false;
+    try {
+      copied = document.execCommand('copy');
+    } finally {
+      area.remove();
+    }
+    if (!copied) throw new Error('Copy command was rejected');
+  }
+
+  async function copyText(text: string) {
+    // The async clipboard API needs a secure context (https or localhost).
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    fallbackCopy(text);
+  }
+
+  for (const pre of document.querySelectorAll('.prose pre')) {
+    if (pre.closest('.code-block')) continue;
+
+    const code = pre.querySelector('code') ?? pre;
+    const language = pre.getAttribute('data-language') ?? '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'code-block';
+
+    const bar = document.createElement('div');
+    bar.className = 'code-block__bar';
+
+    const lang = document.createElement('span');
+    lang.className = 'code-block__lang';
+    lang.textContent = language;
+    if (!language) lang.hidden = true;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'code-block__copy';
+    button.setAttribute('aria-label', 'Copy code');
+    button.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect class="icon-copy" x="9" y="9" width="11" height="11" rx="2"></rect>
+        <path class="icon-copy" d="M5 15V5a2 2 0 0 1 2-2h10"></path>
+        <path class="icon-check" d="m5 13 4 4L19 7"></path>
+      </svg>
+      <span class="code-block__label">${COPY_LABEL}</span>`;
+
+    bar.append(lang, button);
+
+    pre.replaceWith(wrapper);
+    wrapper.append(bar, pre);
+
+    let timer = 0;
+
+    button.addEventListener('click', async () => {
+      const label = button.querySelector('.code-block__label');
+      try {
+        await copyText(code.textContent ?? '');
+      } catch {
+        return;
+      }
+
+      button.classList.add('is-copied');
+      button.setAttribute('aria-label', 'Copied to clipboard');
+      if (label) label.textContent = COPIED_LABEL;
+
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        button.classList.remove('is-copied');
+        button.setAttribute('aria-label', 'Copy code');
+        if (label) label.textContent = COPY_LABEL;
+      }, 1600);
+    });
+  }
+</script>

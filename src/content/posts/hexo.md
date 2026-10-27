@@ -1,14 +1,13 @@
 ---
-title: hexo
-description: 'Hexo 博客的创建、更新、源文件备份与多设备写作流程。'
+title: Hexo
+description: 'Hexo 博客的创建、更新、源文件备份与多设备写作流程'
 published: 2026-01-12
 category: Tools
-tags:
-  - hexo
+tags: [hexo]
 ---
 参考资料：
 
-1. [从零开始搭建 Hexo 博客简明教程（2024版）](https://www.philoli.com/building-a-blog-from-scratch/)
+1. [从零开始搭建 Hexo 博客简明教程（2024 版）](https://www.philoli.com/building-a-blog-from-scratch/)
 2. [Butterfly](https://butterfly.js.org/)
 
 ## 博客更新
@@ -27,14 +26,14 @@ hexo d # hexo deploy，发布推送到 GitHub Pages
 git remote add origin https://github.com/jrxiang/jrxiang.github.io.git
 git add .
 git commit -m "update source"
-git checkout -b source # 若source分支已存在则不用-b
+git checkout -b source # 若 source 分支已存在则不用-b
 git push -u origin source:source
 ```
 
 ## 用不同电脑写博客
 
 ```bash
-npm install -g hexo-cli # 安装hexo框架
+npm install -g hexo-cli # 安装 hexo 框架
 git clone https://github.com/jrxiang/jrxiang.github.io.git
 git pull
 git checkout source

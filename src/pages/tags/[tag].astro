@@ -27,7 +27,7 @@ const { term, posts } = Astro.props;
 ---
 
 <BaseLayout
-  title={`${term.name} — Tag`}
+  title={term.name}
   description={`Posts tagged ${term.name}.`}
 >
   <div class="container page">
